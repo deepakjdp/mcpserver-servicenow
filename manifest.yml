@@ -1,0 +1,15 @@
+applications:
+- name: servicenow-mcp-server
+  memory: 256M
+  instances: 1
+  buildpack: nodejs_buildpack
+  command: node build/index.js
+  env:
+    NODE_ENV: production
+    PORT: 8080
+  # Set these environment variables using: ibmcloud cf set-env
+  # SERVICENOW_INSTANCE_URL: https://your-instance.service-now.com
+  # SERVICENOW_USERNAME: your-username
+  # SERVICENOW_PASSWORD: your-password
+
+# Made with Bob
