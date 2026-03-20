@@ -440,8 +440,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return { tools };
 });
 
-// Handle tool execution
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
+// Tool execution handler function
+async function handleToolCall(request: any) {
   const { name, arguments: args } = request.params;
 
   try {
@@ -635,7 +635,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       isError: true,
     };
   }
-});
+}
+
+// Set up the original server handler
+server.setRequestHandler(CallToolRequestSchema, handleToolCall);
 
 // Create Express app for SSE transport
 const app = express();
@@ -663,12 +666,35 @@ app.get('/health', (req: Request, res: Response) => {
 app.get('/sse', async (req: Request, res: Response) => {
   console.log('New SSE connection established');
   
+  // Create a new server instance for each connection
+  const connectionServer = new Server(
+    {
+      name: 'servicenow-server-sse',
+      version: '0.1.0',
+    },
+    {
+      capabilities: {
+        tools: {},
+      },
+    }
+  );
+
+  // Set up request handlers for this connection
+  connectionServer.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools,
+  }));
+
+  connectionServer.setRequestHandler(CallToolRequestSchema, async (request) =>
+    handleToolCall(request)
+  );
+  
   const transport = new SSEServerTransport('/message', res);
-  await server.connect(transport);
+  await connectionServer.connect(transport);
   
   // Handle client disconnect
   req.on('close', () => {
     console.log('SSE connection closed');
+    connectionServer.close().catch(console.error);
   });
 });
 
